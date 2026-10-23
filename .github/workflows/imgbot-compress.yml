@@ -1,0 +1,37 @@
+name: ImgBot Compress and Log
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  compress-images:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Compress changed images and write markdown log
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.sha }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: bash .github/scripts/imgbot-compress.sh
+
+      - name: Commit and push image optimizations
+        run: |
+          if git diff --quiet; then
+            echo "No ImgBot changes to commit."
+            exit 0
+          fi
+          git config user.name "imgbot[bot]"
+          git config user.email "imgbot[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore(imgbot): compress image assets and add change log [skip ci]"
+          git push
